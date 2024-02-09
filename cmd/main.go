@@ -1,17 +1,19 @@
 package main
 
 import (
-	"net/http"
+	"context"
+	"ideanest/pkg/api/routes"
+	"ideanest/pkg/database/mongodb/repository"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	r := gin.Default()
-	r.GET("/", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "Hello, World!",
-		})
-	})
-	r.Run(":8080")
+	ctx := context.Background()
+	repository.ConnectDB(ctx)
+	defer repository.DisconnectDB()
+
+	router := gin.Default()
+	routes.OrganizationRoute(router)
+	router.Run(":8080")
 }
