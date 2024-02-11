@@ -13,7 +13,7 @@ import (
 // should be called in the starting of the application
 func ConnectDB(c context.Context) *mongo.Client {
 	// TODO: should be loaded from config
-	dbURI := "mongodb://localhost:27017"
+	dbURI := "mongodb://mongodb:27017"
 
 	client, err := mongo.Connect(c, options.Client().ApplyURI(dbURI))
 	if err != nil {
