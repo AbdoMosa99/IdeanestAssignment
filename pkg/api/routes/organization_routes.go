@@ -1,15 +1,17 @@
 package routes
 
 import (
-	"ideanest/pkg/controllers"
+	"ideanest/pkg/api/handlers"
+	"ideanest/pkg/api/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
 func OrganizationRoute(router *gin.Engine) {
-	router.POST("/organization", controllers.CreateOrganization)
-	router.GET("/organization", controllers.ReadOrganizations)
-	router.GET("/organization/:id", controllers.ReadOrganization)
-	router.PUT("/organization/:id", controllers.UpdateOrganization)
-	router.DELETE("/organization/:id", controllers.DeleteOrganization)
+	group := router.Group("/organization").Use(middleware.Auth())
+	group.POST("/", handlers.CreateOrganization())
+	group.GET("/", handlers.ReadOrganizations())
+	group.GET("/:id", handlers.ReadOrganization())
+	group.PUT("/:id", handlers.UpdateOrganization())
+	group.DELETE("/:id", handlers.DeleteOrganization())
 }

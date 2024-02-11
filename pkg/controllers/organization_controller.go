@@ -1,76 +1,62 @@
 package controllers
 
 import (
+	"context"
 	"ideanest/pkg/database/mongodb/models"
 	"ideanest/pkg/database/mongodb/repository"
-	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func CreateOrganization(ctx *gin.Context) {
-	// check that request body matches our model
+func InsertOrganization(organization *models.OrganizationModel) error {
+	organization.Id = primitive.NewObjectID()
+	_, err := repository.OrganizationCollection.InsertOne(context.TODO(), organization)
+	return err
+}
+
+func ListOrganizations() ([]models.OrganizationModel, error) {
+	cur, err := repository.OrganizationCollection.Find(context.TODO(), bson.D{})
+	if err != nil {
+		return nil, err
+	}
+
+	var organizations []models.OrganizationModel
+	err = cur.All(context.TODO(), &organizations)
+	if err != nil {
+		return nil, err
+	}
+
+	return organizations, nil
+}
+
+func RetrieveOrganization(id string) (*models.OrganizationModel, error) {
 	var organization models.OrganizationModel
-	err := ctx.BindJSON(&organization)
+	objID, _ := primitive.ObjectIDFromHex(id)
+	err := repository.OrganizationCollection.FindOne(context.TODO(),
+		bson.M{"id": objID}).Decode(&organization)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-		return
+		return nil, err
 	}
-
-	// if valid, create it
-	err = repository.InsertOrganization(&organization)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
-		return
-	}
-	ctx.JSON(http.StatusCreated, gin.H{"organization_id": organization.Id})
+	return &organization, nil
 }
 
-func ReadOrganizations(ctx *gin.Context) {
-	organizations, err := repository.ListOrganizations()
+func EditOrganization(id string, organization *models.OrganizationModel) error {
+	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
-		return
+		return err
 	}
-	ctx.JSON(http.StatusOK, organizations)
+
+	organization.Id = objID
+	update := bson.M{"name": organization.Name, "description": organization.Description}
+	_, err = repository.OrganizationCollection.UpdateOne(
+		context.TODO(), bson.M{"id": objID}, bson.M{"$set": update})
+	return err
 }
 
-func ReadOrganization(ctx *gin.Context) {
-	id := ctx.Param("id")
-	organization, err := repository.RetrieveOrganization(id)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid ID"})
-		return
-	}
-	ctx.JSON(http.StatusOK, organization)
-}
-
-func UpdateOrganization(ctx *gin.Context) {
-	id := ctx.Param("id")
-
-	// check that request body matches our model
-	var organization models.OrganizationModel
-	err := ctx.BindJSON(&organization)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
-		return
-	}
-
-	err = repository.EditOrganization(id, &organization)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid ID"})
-		return
-	}
-
-	ctx.JSON(http.StatusOK, organization)
-}
-
-func DeleteOrganization(ctx *gin.Context) {
-	id := ctx.Param("id")
-	err := repository.RemoveOrganization(id)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid ID"})
-		return
-	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "deleted"})
+func RemoveOrganization(id string) error {
+	objID, _ := primitive.ObjectIDFromHex(id)
+	_, err := repository.OrganizationCollection.DeleteOne(
+		context.TODO(), bson.M{"id": objID})
+	return err
 }

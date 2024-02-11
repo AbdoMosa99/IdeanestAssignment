@@ -23,21 +23,16 @@ func ConnectDB(c context.Context) *mongo.Client {
 	}
 
 	// initialize state
-	ctx = c
 	db = client
-	organizationCollection = GetCollection("organizations")
+	OrganizationCollection = getCollection("organizations")
+	UserCollection = getCollection("users")
 
 	return db
 }
 
 func DisconnectDB() {
-	err := db.Disconnect(ctx)
+	err := db.Disconnect(context.TODO())
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func GetCollection(collectionName string) *mongo.Collection {
-	collection := db.Database("ideanest").Collection(collectionName)
-	return collection
 }
