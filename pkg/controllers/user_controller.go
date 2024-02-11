@@ -13,7 +13,7 @@ func InsertUser(user models.UserModel) error {
 	return err
 }
 
-func RetreiveUser(email string) (*models.UserModel, error) {
+func RetreiveUserByEmail(email string) (*models.UserModel, error) {
 	var user models.UserModel
 	err := repository.UserCollection.FindOne(
 		context.TODO(), bson.M{"email": email}).Decode(&user)

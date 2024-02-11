@@ -43,7 +43,7 @@ func Auth() gin.HandlerFunc {
 		}
 
 		// get the user
-		user, err := controllers.RetreiveUser(email)
+		user, err := controllers.RetreiveUserByEmail(email)
 		if err != nil {
 			c.JSON(
 				http.StatusUnauthorized,

@@ -5,12 +5,15 @@ import (
 	"ideanest/pkg/database/mongodb/models"
 	"ideanest/pkg/database/mongodb/repository"
 
+	"errors"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func InsertOrganization(organization *models.OrganizationModel) error {
 	organization.Id = primitive.NewObjectID()
+	organization.OrganizationMembers = []models.UserModel{}
 	_, err := repository.OrganizationCollection.InsertOne(context.TODO(), organization)
 	return err
 }
@@ -48,15 +51,32 @@ func EditOrganization(id string, organization *models.OrganizationModel) error {
 	}
 
 	organization.Id = objID
-	update := bson.M{"name": organization.Name, "description": organization.Description}
 	_, err = repository.OrganizationCollection.UpdateOne(
-		context.TODO(), bson.M{"id": objID}, bson.M{"$set": update})
+		context.TODO(), bson.M{"id": objID}, bson.M{"$set": organization})
 	return err
 }
 
 func RemoveOrganization(id string) error {
 	objID, _ := primitive.ObjectIDFromHex(id)
-	_, err := repository.OrganizationCollection.DeleteOne(
+	res, err := repository.OrganizationCollection.DeleteOne(
 		context.TODO(), bson.M{"id": objID})
-	return err
+	if err != nil {
+		return err
+	}
+	if res.DeletedCount != 1 {
+		return errors.New("resource not found")
+	}
+	return nil
+}
+
+func AddUserToOrganization(user *models.UserModel, organization *models.OrganizationModel) (bool, error) {
+	for _, existedUser := range organization.OrganizationMembers {
+		if existedUser.Email == user.Email {
+			return false, nil
+		}
+	}
+	organization.OrganizationMembers = append(organization.OrganizationMembers, *user)
+	_, err := repository.OrganizationCollection.UpdateOne(
+		context.TODO(), bson.M{"id": organization.Id}, bson.M{"$set": organization})
+	return true, err
 }

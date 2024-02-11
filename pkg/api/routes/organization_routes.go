@@ -14,4 +14,5 @@ func OrganizationRoute(router *gin.Engine) {
 	group.GET("/:id", handlers.ReadOrganization())
 	group.PUT("/:id", handlers.UpdateOrganization())
 	group.DELETE("/:id", handlers.DeleteOrganization())
+	group.POST("/:id/invite", handlers.InviteUser())
 }
