@@ -8,24 +8,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Authentication Handler
 func Auth() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		clientToken := c.Request.Header.Get("Authorization")
+	return func(ctx *gin.Context) {
+		// Get the authorization from header
+		clientToken := ctx.Request.Header.Get("Authorization")
 		if clientToken == "" {
-			c.JSON(
+			// if no token was provided
+			ctx.JSON(
 				http.StatusForbidden,
 				gin.H{"message": "No Authorization header provided"})
-			c.Abort()
+			ctx.Abort()
 			return
 		}
 
+		// extract the token from header (format: "Bearer {token}")
 		extractedToken := strings.Split(clientToken, "Bearer ")
 		if len(extractedToken) != 2 {
 			// If the token is not in the correct format, return a 400 status code
-			c.JSON(
+			ctx.JSON(
 				http.StatusBadRequest,
 				gin.H{"message": "Incorrect Format of Authorization Token"})
-			c.Abort()
+			ctx.Abort()
 			return
 		}
 
@@ -35,24 +39,27 @@ func Auth() gin.HandlerFunc {
 		// validate token
 		email, err := controllers.ValidateToken(clientToken)
 		if err != nil {
-			c.JSON(
+			ctx.JSON(
 				http.StatusUnauthorized,
 				gin.H{"message": "Token is not authorized"})
-			c.Abort()
+			ctx.Abort()
 			return
 		}
 
-		// get the user
+		// get the user attached to this token
 		user, err := controllers.RetreiveUserByEmail(email)
 		if err != nil {
-			c.JSON(
+			ctx.JSON(
 				http.StatusUnauthorized,
 				gin.H{"message": "Token is not bound to a current user"})
-			c.Abort()
+			ctx.Abort()
 			return
 		}
 
-		c.Set("user", user)
-		c.Next()
+		// set user in context for next handler
+		ctx.Set("user", user)
+
+		// forward to next handler
+		ctx.Next()
 	}
 }

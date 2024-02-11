@@ -2,6 +2,7 @@ package models
 
 import "go.mongodb.org/mongo-driver/bson/primitive"
 
+// Model representing an Organization Entity
 type OrganizationModel struct {
 	Id                  primitive.ObjectID `json:"organization_id"`
 	Name                string             `json:"name"`
@@ -9,6 +10,7 @@ type OrganizationModel struct {
 	OrganizationMembers []UserReference    `json:"organization_members"`
 }
 
+// Model representing the organization member user
 type UserReference struct {
 	Name       string `json:"name"`
 	Email      string `json:"email"`

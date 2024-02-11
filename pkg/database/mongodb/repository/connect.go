@@ -9,10 +9,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
+// Function that connects to the mongodb database and initializes the state
+// should be called in the starting of the application
 func ConnectDB(c context.Context) *mongo.Client {
-	client, err := mongo.Connect(c,
-		options.Client().ApplyURI("mongodb://localhost:27017"))
+	// TODO: should be loaded from config
+	dbURI := "mongodb://localhost:27017"
+
+	client, err := mongo.Connect(c, options.Client().ApplyURI(dbURI))
 	if err != nil {
+		// can't connect!
 		log.Fatal(err)
 	}
 
@@ -30,9 +35,12 @@ func ConnectDB(c context.Context) *mongo.Client {
 	return db
 }
 
+// function that disconnects from the database
+// should be called when the application stops
 func DisconnectDB() {
 	err := db.Disconnect(context.TODO())
 	if err != nil {
+		// can't disconnect
 		log.Fatal(err)
 	}
 }
