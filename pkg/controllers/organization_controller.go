@@ -4,8 +4,7 @@ import (
 	"context"
 	"ideanest/pkg/database/mongodb/models"
 	"ideanest/pkg/database/mongodb/repository"
-
-	"errors"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -13,24 +12,27 @@ import (
 
 func InsertOrganization(organization *models.OrganizationModel) error {
 	organization.Id = primitive.NewObjectID()
-	organization.OrganizationMembers = []models.UserModel{}
 	_, err := repository.OrganizationCollection.InsertOne(context.TODO(), organization)
 	return err
 }
 
 func ListOrganizations() ([]models.OrganizationModel, error) {
-	cur, err := repository.OrganizationCollection.Find(context.TODO(), bson.D{})
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cur, err := repository.OrganizationCollection.Find(ctx, bson.D{})
 	if err != nil {
 		return nil, err
 	}
+	defer cur.Close(ctx)
 
 	var organizations []models.OrganizationModel
-	err = cur.All(context.TODO(), &organizations)
-	if err != nil {
-		return nil, err
+	err = cur.All(ctx, &organizations)
+	if organizations == nil {
+		organizations = []models.OrganizationModel{}
 	}
 
-	return organizations, nil
+	return organizations, err
 }
 
 func RetrieveOrganization(id string) (*models.OrganizationModel, error) {
@@ -44,29 +46,16 @@ func RetrieveOrganization(id string) (*models.OrganizationModel, error) {
 	return &organization, nil
 }
 
-func EditOrganization(id string, organization *models.OrganizationModel) error {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-
-	organization.Id = objID
-	_, err = repository.OrganizationCollection.UpdateOne(
-		context.TODO(), bson.M{"id": objID}, bson.M{"$set": organization})
+func EditOrganization(organization *models.OrganizationModel) error {
+	_, err := repository.OrganizationCollection.UpdateOne(
+		context.TODO(), bson.M{"id": organization.Id}, bson.M{"$set": organization})
 	return err
 }
 
-func RemoveOrganization(id string) error {
-	objID, _ := primitive.ObjectIDFromHex(id)
-	res, err := repository.OrganizationCollection.DeleteOne(
-		context.TODO(), bson.M{"id": objID})
-	if err != nil {
-		return err
-	}
-	if res.DeletedCount != 1 {
-		return errors.New("resource not found")
-	}
-	return nil
+func RemoveOrganization(organization *models.OrganizationModel) error {
+	_, err := repository.OrganizationCollection.DeleteOne(
+		context.TODO(), bson.M{"id": organization.Id})
+	return err
 }
 
 func AddUserToOrganization(user *models.UserModel, organization *models.OrganizationModel) (bool, error) {
@@ -75,8 +64,22 @@ func AddUserToOrganization(user *models.UserModel, organization *models.Organiza
 			return false, nil
 		}
 	}
-	organization.OrganizationMembers = append(organization.OrganizationMembers, *user)
+	userRef := models.UserReference{
+		Name:       user.Name,
+		Email:      user.Email,
+		AcessLevel: "readonly",
+	}
+	organization.OrganizationMembers = append(organization.OrganizationMembers, userRef)
 	_, err := repository.OrganizationCollection.UpdateOne(
 		context.TODO(), bson.M{"id": organization.Id}, bson.M{"$set": organization})
 	return true, err
+}
+
+func GetUserAccess(user *models.UserModel, organization *models.OrganizationModel) *string {
+	for _, userRef := range organization.OrganizationMembers {
+		if user.Email == userRef.Email {
+			return &userRef.AcessLevel
+		}
+	}
+	return nil
 }

@@ -8,11 +8,15 @@ import (
 )
 
 func OrganizationRoute(router *gin.Engine) {
-	group := router.Group("/organization").Use(middleware.Auth())
-	group.POST("/", handlers.CreateOrganization())
-	group.GET("/", handlers.ReadOrganizations())
-	group.GET("/:id", handlers.ReadOrganization())
-	group.PUT("/:id", handlers.UpdateOrganization())
-	group.DELETE("/:id", handlers.DeleteOrganization())
-	group.POST("/:id/invite", handlers.InviteUser())
+	organizationGroup := router.Group("/organization")
+	organizationGroup.Use(middleware.Auth())
+	organizationGroup.POST("/", handlers.CreateOrganization())
+	organizationGroup.GET("/", handlers.ReadOrganizations())
+
+	idGroup := organizationGroup.Group("/:id")
+	idGroup.Use(middleware.AccessAuth())
+	idGroup.GET("/", handlers.ReadOrganization())
+	idGroup.PUT("/", handlers.UpdateOrganization())
+	idGroup.DELETE("/", handlers.DeleteOrganization())
+	idGroup.POST("/invite", handlers.InviteUser())
 }
